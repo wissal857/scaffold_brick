@@ -1,0 +1,3 @@
+class SyncStrategyExecutor {
+  const SyncStrategyExecutor();
+}

@@ -1,0 +1,3 @@
+class FullSyncStrategy {
+  const FullSyncStrategy();
+}
