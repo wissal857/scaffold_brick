@@ -22,21 +22,6 @@ class MutationDao extends DatabaseAccessor<AppDatabase>
     return (delete(mutations)..where((op) => op.id.equals(id))).go();
   }
 
-  // @override
-  // Future<MutationData> coalsceUpdates(
-  //   List<MutationData> toDelete,
-  //   MutationsCompanion newOperation,
-  // ) {
-  //   List<int> idsToDelete = toDelete.map((o) => o.id).toList();
-  //   return transaction(() async {
-  //     await batch((batch) {
-  //       batch.deleteWhere(mutations, (op) => op.id.isIn(idsToDelete));
-  //     });
-
-  //     return await insertIfAbsent(newOperation);
-  //   });
-  // }
-
   @override
   Future<void> updateStatus(int id, MutationStatus newStatus) async {
     await (update(mutations)..where((o) => o.id.equals(id))).write(
@@ -65,16 +50,16 @@ class MutationDao extends DatabaseAccessor<AppDatabase>
   }
 
   @override
-  Future<List<MutationData>> findByOperationTypeAndEntityTypeAndEntityId({
+  Future<List<MutationData>> findByOperationTypeAndEntityTypeAndEntityLocalId({
     required MutationType mutationType,
     required String entityType,
-    required String entityId,
+    required int entityLocalId,
   }) {
     return (select(mutations)..where(
           (o) =>
               o.operationType.equals(mutationType.label) &
               o.entityType.equals(entityType) &
-              o.entityId.equals(entityId),
+              o.entityLocalId.equals(entityLocalId),
         ))
         .get();
   }
@@ -98,17 +83,17 @@ class MutationDao extends DatabaseAccessor<AppDatabase>
     switch (mutation.operationType.value) {
       case MutationType.create:
         if ((await findByEntityTypeAndIdempotencyKey(
-          entityType: mutation.entityType.value,
+          entityType: mutation.entityType.value.label,
           idempotencyKey: mutation.idempotencyKey.value!,
         )).isNotEmpty) {
           return false;
         }
         break;
       case MutationType.delete:
-        if ((await findByOperationTypeAndEntityTypeAndEntityId(
+        if ((await findByOperationTypeAndEntityTypeAndEntityLocalId(
           mutationType: MutationType.delete,
-          entityType: mutation.entityType.value,
-          entityId: mutation.entityId.value,
+          entityType: mutation.entityType.value.label,
+          entityLocalId: mutation.entityLocalId.value,
         )).isNotEmpty) {
           return false;
         }
@@ -116,10 +101,10 @@ class MutationDao extends DatabaseAccessor<AppDatabase>
       case MutationType.update:
         if (mutation.dirtyFields.value == null) return false;
         final updateOperations =
-            await findByOperationTypeAndEntityTypeAndEntityId(
+            await findByOperationTypeAndEntityTypeAndEntityLocalId(
               mutationType: MutationType.update,
-              entityType: mutation.entityType.value,
-              entityId: mutation.entityId.value,
+              entityType: mutation.entityType.value.label,
+              entityLocalId: mutation.entityLocalId.value,
             );
         if (updateOperations.isNotEmpty) {
           // compare dirty fields

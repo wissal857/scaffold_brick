@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:{{project_name}}/core/logging/app_logger.dart';
+import 'package:{{project_name}}/app/utils/entity_type.dart';
 
 enum MutationType {
   create('CREATE'),
@@ -39,31 +40,31 @@ class SyncMutationRequestPayload {
 sealed class SyncMutationRequest {
   const SyncMutationRequest._({
     required this.entityType,
-    required this.entityId,
     required this.mutationType,
     required this.payload,
     required this.timestamp,
   });
 
   factory SyncMutationRequest.create({
-    required String entityType,
-    required String entityId,
+    required EntityType entityType,
     required String idempotencyKey,
     required Map<String, dynamic> payload,
     required DateTime timestamp,
   }) = SyncCreateRequest._;
 
   factory SyncMutationRequest.delete({
-    required String entityType,
-    required String entityId,
+    required EntityType entityType,
+    required int entityLocalId,
+    required String entityRemoteId,
     required String etag,
     required Map<String, dynamic> payload,
     required DateTime timestamp,
   }) = SyncDeleteRequest._;
 
   factory SyncMutationRequest.update({
-    required String entityType,
-    required String entityId,
+    required EntityType entityType,
+    required int entityLocalId,
+    required String entityRemoteId,
     required String etag,
     required Map<String, dynamic> payload,
     required Map<String, dynamic> previousPayload,
@@ -71,24 +72,22 @@ sealed class SyncMutationRequest {
     required Set<String> dirtyFields,
   }) = SyncUpdateRequest._;
 
-  final String entityType;
+  final EntityType entityType;
 
   // Assigned type String because it can hold the idempotencyKey
-  final String entityId;
   final MutationType mutationType;
   final Map<String, dynamic> payload;
   final DateTime timestamp;
 
   @override
   String toString() {
-    return "SyncRequest -> entityType: $entityType, entityId: $entityId, mutationType: ${mutationType.label}, timestamp: $timestamp, payload: ${payload.toString()}";
+    return "SyncRequest -> entityType: $entityType, mutationType: ${mutationType.label}, timestamp: $timestamp, payload: ${payload.toString()}";
   }
 }
 
 final class SyncCreateRequest extends SyncMutationRequest {
   SyncCreateRequest._({
     required super.entityType,
-    required super.entityId,
     required this.idempotencyKey,
     super.mutationType = MutationType.create,
     required super.payload,
@@ -101,7 +100,8 @@ final class SyncCreateRequest extends SyncMutationRequest {
 final class SyncDeleteRequest extends SyncMutationRequest {
   SyncDeleteRequest._({
     required super.entityType,
-    required super.entityId,
+    required this.entityLocalId,
+    required this.entityRemoteId,
     required this.etag,
     super.mutationType = MutationType.delete,
     required super.payload,
@@ -109,12 +109,15 @@ final class SyncDeleteRequest extends SyncMutationRequest {
   }) : super._();
 
   final String etag;
+  final int entityLocalId;
+  final String entityRemoteId;
 }
 
 final class SyncUpdateRequest extends SyncMutationRequest {
   const SyncUpdateRequest._({
     required super.entityType,
-    required super.entityId,
+    required this.entityLocalId,
+    required this.entityRemoteId,
     required this.etag,
     super.mutationType = MutationType.update,
     required super.payload,
@@ -126,9 +129,11 @@ final class SyncUpdateRequest extends SyncMutationRequest {
   final Set<String> dirtyFields;
   final Map<String, dynamic> previousPayload;
   final String etag;
+  final int entityLocalId;
+  final String entityRemoteId;
 
   @override
   String toString() {
-    return "SyncRequest -> entityType: $entityType, entityId: $entityId, mutationType: ${mutationType.label}, timestamp: $timestamp, payload: ${payload.toString()}, dirtyFields: ${dirtyFields.toString()}, previousPayload: $previousPayload";
+    return "SyncRequest -> entityType: $entityType, entityRemoteId: $entityRemoteId, mutationType: ${mutationType.label}, timestamp: $timestamp, payload: ${payload.toString()}, dirtyFields: ${dirtyFields.toString()}, previousPayload: $previousPayload";
   }
 }

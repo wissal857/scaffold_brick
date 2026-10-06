@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-part 'paginated_data_dto.freezed.dart';
-part 'paginated_data_dto.g.dart';
+part 'paginated_api_response.freezed.dart';
+part 'paginated_api_response.g.dart';
 
 @Freezed(genericArgumentFactories: true)
 abstract class PaginatedApiResponse<T> with _$PaginatedApiResponse<T> {

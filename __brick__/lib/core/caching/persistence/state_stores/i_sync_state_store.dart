@@ -1,20 +1,20 @@
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/mutation_status.dart';
-import 'package:{{project_name}}/core/database/app_db.dart';
+import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 
 abstract interface class ISyncStateStore {
   // Updates the sync status to completed and sets the server_id
   // with etag fields in the entity then deletes the mutation from db
   Future<void> commitRemoteCreate({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required int serverId,
     required String etag,
   });
 
   /// Updates the sync status of the entity
-  Future<void> commitRemoteUpdate({required MutationData mutation});
+  Future<void> commitRemoteUpdate({required ValidMutationData mutation});
 
   /// Updates the sync status of the entity
-  Future<void> commitRemoteDelete({required MutationData mutation});
+  Future<void> commitRemoteDelete({required ValidMutationData mutation});
 
   /// Restores an entity to its previous state after a sync
   /// failure and deletes its asssociated operation from the db
@@ -28,13 +28,13 @@ abstract interface class ISyncStateStore {
   /// Throws PreviousPayloadMissingException and SqliteException
   Future<void> rollback({
     required MutationStatus syncStatus,
-    required MutationData mutation,
+    required ValidMutationData mutation,
   });
 
-  Future<void> markInProgress(MutationData mutation);
+  Future<void> markInProgress(ValidMutationData mutation);
 
   Future<void> applyConflictResolution({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required String etag,
     required Map<String, dynamic> resolvedData,
   });

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:{{project_name}}/core/notifications/app_notification.dart';
+import 'package:{{project_name}}/core/notifications/notifications_provider.dart';
 
 class AppNotificationsListener extends ConsumerWidget {
   final Widget child;

@@ -4,14 +4,14 @@ import 'dart:math';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_mutation_queue.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/mutation_status.dart';
 import 'package:{{project_name}}/core/constants/app_constants.dart';
-import 'package:{{project_name}}/core/database/app_db.dart';
+import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/errors/app_exception.dart';
 
 class MutationQueue implements IMutationQueue {
   MutationQueue()
-    : _mutations = Queue<MutationData>(),
+    : _mutations = Queue<ValidMutationData>(),
       _capacity = AppConstants.kMutationQueueCapacity;
-  final Queue<MutationData> _mutations;
+  final Queue<ValidMutationData> _mutations;
   final int _capacity;
 
   @override
@@ -25,13 +25,13 @@ class MutationQueue implements IMutationQueue {
 
   /// Throws CachingException.mutationQueueCapacityExceeded
   @override
-  void enqueue(MutationData syncRequest) {
+  void enqueue(ValidMutationData mutationData) {
     if (isFull) throw CachingException.mutationQueueCapacityExceeded();
-    _mutations.add(syncRequest);
+    _mutations.add(mutationData);
   }
 
   @override
-  List<MutationData> takeBatch({int size = 10}) {
+  List<ValidMutationData> takeBatch({int size = 10}) {
     int count = min(size, _mutations.length);
     return List.generate(count, (_) => _mutations.removeFirst());
   }
@@ -42,16 +42,10 @@ class MutationQueue implements IMutationQueue {
   }
 
   @override
-  void coalesceUpdates(List<int> toDelete, MutationData newOperation) {
-    toDelete.forEach(remove);
-    enqueue(newOperation);
-  }
-
-  @override
   void setStatus(int id, MutationStatus newStatus) {
     _mutations
         .where((m) => m.id == id)
-        .map((m) => m.copyWith(status: newStatus.label));
+        .map((m) => m.copyWith(status: newStatus));
   }
 
   @override

@@ -21,10 +21,11 @@ sealed class CachingException extends AppException {
   const factory CachingException.dequeuingEmptyQueue() = DequeuingEmptyQueue._;
   const factory CachingException.previousPayloadMissingOrCorrupted() =
       PreviousPayloadMissingOrCorrupted._;
-  const factory CachingException.payloadMissingOrCorrupted() =
-      PayloadMissingOrCorrupted._;
   const factory CachingException.duplicateInsertOfMutation() =
       DuplicateInsertOfMutation._;
+  const factory CachingException.corruptedMutationTable({
+    required String message,
+  }) = CorruptedMutationTable._;
 }
 
 final class SyncAlreadyRunning extends CachingException {
@@ -78,19 +79,15 @@ final class PreviousPayloadMissingOrCorrupted extends CachingException {
       );
 }
 
-final class PayloadMissingOrCorrupted extends CachingException {
-  const PayloadMissingOrCorrupted._()
-    : super._(
-        code: 'PAYLOAD_MISSING_OR_CORRUPTED',
-        message:
-            'The payload is either missing from the recorded mutation or corrupted.',
-      );
-}
-
 final class DuplicateInsertOfMutation extends CachingException {
   const DuplicateInsertOfMutation._()
     : super._(
         code: 'DUPLICATE_MUTATION_INSERT',
         message: 'There is a previous identical mutation queued.',
       );
+}
+
+final class CorruptedMutationTable extends CachingException {
+  const CorruptedMutationTable._({required super.message})
+    : super._(code: 'CORRUPTED_MUTATION_TABLE');
 }

@@ -9,10 +9,10 @@ abstract interface class IMutationDao {
     required String idempotencyKey,
   });
 
-  Future<List<MutationData>> findByOperationTypeAndEntityTypeAndEntityId({
+  Future<List<MutationData>> findByOperationTypeAndEntityTypeAndEntityLocalId({
     required MutationType mutationType,
     required String entityType,
-    required String entityId,
+    required int entityLocalId,
   });
 
   /// Inserts a new mutation if there are no pending
@@ -21,11 +21,6 @@ abstract interface class IMutationDao {
   /// Throws CachingException.duplicateInsertOfMutation
   Future<MutationData> insertIfAbsent(MutationsCompanion change);
   Future<void> deleteOperation(int id);
-
-  // Future<MutationData> coalsceUpdates(
-  //   List<MutationData> toDelete,
-  //   MutationsCompanion newOperation,
-  // );
 
   Future<void> updateStatus(int id, MutationStatus newStatus);
 }

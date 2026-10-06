@@ -2,13 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:{{project_name}}/core/caching/models/remote_mutation_response.dart';
 import 'package:{{project_name}}/core/caching/models/sync_mutation_request.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
+import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/retry_policy.dart';
 import 'package:{{project_name}}/core/database/app_db.dart';
 import 'package:{{project_name}}/core/errors/app_exception.dart';
 import 'package:{{project_name}}/core/logging/app_logger.dart';
 import 'package:{{project_name}}/core/network/i_http_client.dart';
 
-class RemoteMutationExecutor {
+class RemoteMutationExecutor implements IRemoteMutationExecutor {
   RemoteMutationExecutor({
     required IHttpClient httpClient,
     required RetryPolicy retryPolicy,
@@ -22,15 +23,16 @@ class RemoteMutationExecutor {
   final ISyncStateStore _syncStateStore;
   final _log = AppLogger.logger;
 
+  @override
   Future<List<RemoteMutationResponse>> execute(
-    List<MutationData> pendingMutations,
+    List<ValidMutationData> pendingMutations,
   ) async {
     final futures = pendingMutations.map(_executeOne);
     return Future.wait(futures);
   }
 
   Future<RemoteMutationResponse> _executeOne(
-    MutationData pendingMutation,
+    ValidMutationData pendingMutation,
   ) async {
     return _retryMutation(
       pendingMutation,
@@ -40,41 +42,38 @@ class RemoteMutationExecutor {
   }
 
   Future<RemoteMutationResponse> _buildHttpRequest(
-    MutationData pendingMutation,
+    ValidMutationData pendingMutation,
   ) {
-    switch (pendingMutation.operationType) {
-      case MutationType.create:
-        return _safeRequest(
-          _httpClient.post(
-            "/${pendingMutation.entityType}",
-            data: pendingMutation.payload,
-            headers: {'Idempotency-Key': pendingMutation.etag},
-          ),
-          pendingMutation,
-        );
-      case MutationType.update:
-        return _safeRequest(
-          _httpClient.put(
-            "/${pendingMutation.entityType}/${pendingMutation.entityId}",
-            data: pendingMutation.payload,
-            headers: {'If-Match': pendingMutation.etag},
-          ),
-          pendingMutation,
-        );
-      case MutationType.delete:
-        return _safeRequest(
-          _httpClient.delete(
-            "/${pendingMutation.entityType}/${pendingMutation.entityId}",
-            headers: {'If-Match': pendingMutation.etag},
-          ),
-          pendingMutation,
-        );
-    }
+    return switch (pendingMutation.operationType) {
+      MutationType.create => _safeRequest(
+        _httpClient.post(
+          "/${pendingMutation.entityType}",
+          data: pendingMutation.payload,
+          headers: {'Idempotency-Key': pendingMutation.etag},
+        ),
+        pendingMutation,
+      ),
+      MutationType.update => _safeRequest(
+        _httpClient.put(
+          "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
+          data: pendingMutation.payload,
+          headers: {'If-Match': pendingMutation.etag},
+        ),
+        pendingMutation,
+      ),
+      MutationType.delete => _safeRequest(
+        _httpClient.delete(
+          "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
+          headers: {'If-Match': pendingMutation.etag},
+        ),
+        pendingMutation,
+      ),
+    };
   }
 
   Future<RemoteMutationResponse> _safeRequest(
     Future<Response> request,
-    MutationData mutation,
+    ValidMutationData mutation,
   ) async {
     try {
       await _syncStateStore.markInProgress(mutation);
@@ -113,7 +112,7 @@ class RemoteMutationExecutor {
   }
 
   Future<RemoteMutationResponse> _handleSafeRequestDioException(
-    MutationData mutation,
+    ValidMutationData mutation,
     DioException e,
   ) async {
     if (e.type == DioExceptionType.badResponse) {
@@ -165,7 +164,7 @@ class RemoteMutationExecutor {
   }
 
   Future<RemoteMutationResponse> _retryMutation(
-    MutationData mutation,
+    ValidMutationData mutation,
     Future<RemoteMutationResponse> request,
     int attempt,
   ) async {
@@ -185,10 +184,10 @@ class RemoteMutationExecutor {
     return response;
   }
 
-  Future<Response?> _retryFetch(MutationData mutation, int attempt) async {
+  Future<Response?> _retryFetch(ValidMutationData mutation, int attempt) async {
     try {
       return await _httpClient.get(
-        '/${mutation.entityType}/${mutation.entityId}',
+        '/${mutation.entityType}/${mutation.entityRemoteId}',
       );
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
@@ -199,23 +198,23 @@ class RemoteMutationExecutor {
         if (_retryPolicy.shouldRetry(attempt)) {
           final delay = _retryPolicy.getDelayForAttempt(attempt);
           _log.warning(
-            "Retrying network request GET /${mutation.entityType}/${mutation.entityId} in ${delay}s, attempt number $attempt",
+            "Retrying network request GET /${mutation.entityType}/${mutation.entityRemoteId} in ${delay}s, attempt number $attempt",
           );
           await Future.delayed(delay);
           return _retryFetch(mutation, attempt + 1);
         }
       }
-      _logFetchError(mutation.entityType, mutation.entityId, e);
+      _logFetchError(mutation.entityType.label, mutation.entityRemoteId!, e);
       return null;
     } catch (e) {
-      _logFetchError(mutation.entityType, mutation.entityId, e);
+      _logFetchError(mutation.entityType.label, mutation.entityRemoteId!, e);
       return null;
     }
   }
 
-  void _logFetchError(String entityType, String entityId, Object e) {
+  void _logFetchError(String entityType, String entityRemoteId, Object e) {
     _log.severe(
-      'RemoteMutationExecutor failed to fetch a resource after a conflict: path /$entityType/$entityId',
+      'RemoteMutationExecutor failed to fetch a resource after a conflict: path /$entityType/$entityRemoteId',
       e,
     );
   }

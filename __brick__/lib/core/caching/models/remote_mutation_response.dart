@@ -1,4 +1,4 @@
-import 'package:{{project_name}}/core/database/app_db.dart';
+import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 
 enum RemoteMutationErrorType {
   connectionError,
@@ -13,26 +13,26 @@ enum RemoteMutationErrorType {
 sealed class RemoteMutationResponse {
   const RemoteMutationResponse._({required this.mutation});
 
-  final MutationData mutation;
+  final ValidMutationData mutation;
 
   const factory RemoteMutationResponse.error({
     required RemoteMutationErrorType errorType,
-    required MutationData mutation,
+    required ValidMutationData mutation,
   }) = RemoteMutationError._;
 
   const factory RemoteMutationResponse.conflict({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required String etag,
     required Map<String, dynamic> serverRepresentation,
   }) = RemoteMutationConflict._;
 
   const factory RemoteMutationResponse.success({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required Map<String, dynamic> responseData,
   }) = RemoteMutationSuccess._;
 
   const factory RemoteMutationResponse.createSuccess({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required String etag,
     required Map<String, dynamic> responseData,
   }) = RemoteMutationCreateSuccess._;

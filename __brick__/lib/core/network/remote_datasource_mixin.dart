@@ -1,4 +1,4 @@
-import 'package:{{project_name}}/core/data/models/local/paginated_cache_model.dart';
+import 'package:{{project_name}}/core/data/models/remote/paginated_api_response.dart';
 import 'package:{{project_name}}/core/utils/paginated_query_params.dart';
 
 import 'i_http_client.dart';
@@ -7,7 +7,7 @@ mixin RemoteDataSourceMixin<T> {
   IHttpClient get httpClient;
 
   /// fetches a paginated list
-  Future<PaginatedCacheModel<T>> fetchPaginatedList({
+  Future<PaginatedApiResponse<T>> fetchPaginatedList({
     required String endpoint,
     required PaginatedQueryParams paginatedParams,
     required T Function(Map<String, dynamic>) parser,
@@ -30,7 +30,7 @@ mixin RemoteDataSourceMixin<T> {
       );
     }
 
-    final paginatedResponse = PaginatedCacheModel<T>.fromJson(
+    final paginatedResponse = PaginatedApiResponse<T>.fromJson(
       response.data!,
       (json) => parser(json as Map<String, dynamic>),
     );
@@ -76,7 +76,7 @@ mixin RemoteDataSourceMixin<T> {
     required String endpoint,
     required Map<String, dynamic> data,
   }) async {
-    await httpClient.put<void>(endpoint, data: data);
+    await httpClient.put(endpoint, data: data);
   }
 
   // converts query parameters model to a dataset suited for dio queries
@@ -89,9 +89,6 @@ mixin RemoteDataSourceMixin<T> {
 
     if (paginatedParams.query != null && paginatedParams.query!.isNotEmpty) {
       params['search'] = paginatedParams.query;
-    }
-    if (paginatedParams.limit != null) {
-      params['limit'] = paginatedParams.limit;
     }
     if (paginatedParams.sortBy != null) {
       params['sort_by'] = paginatedParams.sortBy?.label;

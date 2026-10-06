@@ -2,23 +2,22 @@ import 'package:{{project_name}}/core/caching/models/conflict_resolution.dart';
 import 'package:{{project_name}}/core/caching/models/remote_mutation_response.dart';
 import 'package:{{project_name}}/core/caching/models/sync_mutation_request.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
-import 'package:{{project_name}}/core/caching/sync_engine/mutations/conflict_resolver.dart';
+import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_conflict_resolver.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_mutation_queue.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/mutation_status.dart';
-import 'package:{{project_name}}/core/errors/app_exception.dart';
 
 class RemoteMutationResultHandler {
   const RemoteMutationResultHandler({
-    required ISyncStateStore stateStore,
+    required ISyncStateStore syncStateStore,
     required IMutationQueue mutationQueue,
-    required ConflictResolver conflictResolver,
-  }) : _syncStateStore = stateStore,
+    required IConflictResolver conflictResolver,
+  }) : _syncStateStore = syncStateStore,
        _mutationQueue = mutationQueue,
        _conflictResolver = conflictResolver;
 
   final ISyncStateStore _syncStateStore;
   final IMutationQueue _mutationQueue;
-  final ConflictResolver _conflictResolver;
+  final IConflictResolver _conflictResolver;
 
   Future<void> handle(List<RemoteMutationResponse> results) async {
     for (final result in results) {
@@ -75,11 +74,8 @@ class RemoteMutationResultHandler {
 
   Future<void> _handleConflict(RemoteMutationConflict response) async {
     try {
-      if (response.mutation.payload.data == null) {
-        throw CachingException.payloadMissingOrCorrupted();
-      }
       final resolution = resolveConflict(
-        localData: response.mutation.payload.data!,
+        localData: response.mutation.payload!,
         remoteData: response.serverRepresentation,
         strategy: ConflictResolutionStrategy.useRemote,
       );

@@ -1,7 +1,8 @@
 import 'package:{{project_name}}/core/caching/models/sync_mutation_request.dart';
 import 'package:{{project_name}}/core/caching/persistence/dao/i_mutation_dao.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
-import 'package:{{project_name}}/core/caching/persistence/state_stores/state_handler_registry.dart';
+import 'package:{{project_name}}/core/caching/persistence/state_stores/i_entity_local_datasource_registry.dart';
+import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/persistence/transactions/persistence_transaction.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/mutation_status.dart';
 import 'package:{{project_name}}/core/database/app_db.dart';
@@ -10,19 +11,19 @@ import 'package:{{project_name}}/core/errors/app_exception.dart';
 class SyncStateStore implements ISyncStateStore {
   const SyncStateStore({
     required IMutationDao mutationDao,
-    required StateHandlerRegistry registry,
+    required IEntityLocalDatasourceRegistry registry,
     required PersistenceTransaction transaction,
   }) : _mutationDao = mutationDao,
        _registry = registry,
        _transaction = transaction;
 
   final IMutationDao _mutationDao;
-  final StateHandlerRegistry _registry;
+  final IEntityLocalDatasourceRegistry _registry;
   final PersistenceTransaction _transaction;
 
   @override
   Future<void> applyConflictResolution({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required String etag,
     required Map<String, dynamic> resolvedData,
   }) async {
@@ -34,11 +35,15 @@ class SyncStateStore implements ISyncStateStore {
         'syncStatus': MutationStatus.completed.label,
       });
     }
-
+    if (mutation.entityLocalId == null) {
+      throw CachingException.corruptedMutationTable(
+        message: 'Can\'t find entity local id for mutation $mutation',
+      );
+    }
     _transaction.run(() async {
       await _registry
           .get(mutation.entityType)
-          .update(mutation.entityId, resolvedData);
+          .update(mutation.entityLocalId!, resolvedData);
       await _mutationDao.deleteOperation(mutation.id);
     });
   }
@@ -47,20 +52,20 @@ class SyncStateStore implements ISyncStateStore {
   // with etag fields in the entity then deletes the mutation from db
   @override
   Future<void> commitRemoteCreate({
-    required MutationData mutation,
+    required ValidMutationData mutation,
     required int serverId,
     required String etag,
   }) async {
     try {
       final patch = <String, dynamic>{
-        'id': serverId,
+        'serverId': serverId,
         'etag': etag,
         'syncStatus': MutationStatus.completed.label,
       };
       _transaction.run(() async {
         await _registry
             .get(mutation.entityType)
-            .update(mutation.entityId, patch);
+            .update(mutation.entityLocalId!, patch);
         await _mutationDao.deleteOperation(mutation.id);
       });
     } catch (e) {
@@ -69,7 +74,7 @@ class SyncStateStore implements ISyncStateStore {
   }
 
   @override
-  Future<void> commitRemoteDelete({required MutationData mutation}) async {
+  Future<void> commitRemoteDelete({required ValidMutationData mutation}) async {
     try {
       final patch = <String, dynamic>{
         'syncStatus': MutationStatus.completed.label,
@@ -77,7 +82,7 @@ class SyncStateStore implements ISyncStateStore {
       _transaction.run(() async {
         await _registry
             .get(mutation.entityType)
-            .update(mutation.entityId, patch);
+            .update(mutation.entityLocalId!, patch);
         await _mutationDao.deleteOperation(mutation.id);
       });
     } catch (e) {
@@ -86,7 +91,7 @@ class SyncStateStore implements ISyncStateStore {
   }
 
   @override
-  Future<void> commitRemoteUpdate({required MutationData mutation}) async {
+  Future<void> commitRemoteUpdate({required ValidMutationData mutation}) async {
     try {
       final patch = <String, dynamic>{
         'syncStatus': MutationStatus.completed.label,
@@ -94,7 +99,7 @@ class SyncStateStore implements ISyncStateStore {
       _transaction.run(() async {
         await _registry
             .get(mutation.entityType)
-            .update(mutation.entityId, patch);
+            .update(mutation.entityLocalId!, patch);
         await _mutationDao.deleteOperation(mutation.id);
       });
     } catch (e) {
@@ -104,7 +109,7 @@ class SyncStateStore implements ISyncStateStore {
 
   /// Throws SqliteException
   @override
-  Future<void> markInProgress(MutationData mutation) async {
+  Future<void> markInProgress(ValidMutationData mutation) async {
     await _mutationDao.updateStatus(mutation.id, MutationStatus.inProgress);
   }
 
@@ -121,7 +126,7 @@ class SyncStateStore implements ISyncStateStore {
   @override
   Future<void> rollback({
     required MutationStatus syncStatus,
-    required MutationData mutation,
+    required ValidMutationData mutation,
   }) async {
     late Future<void> entityRestore = _buildEntityRestoreRequest(mutation);
 
@@ -132,26 +137,23 @@ class SyncStateStore implements ISyncStateStore {
   }
 
   /// Throws PreviousPayloadMissingException
-  Future<void> _buildEntityRestoreRequest(MutationData mutation) {
+  Future<void> _buildEntityRestoreRequest(ValidMutationData mutation) {
     return switch (mutation.operationType) {
-      // TODO just update sync status do not delete it
+      // TODO update sync status
       MutationType.create =>
-        _registry.get(mutation.entityType).delete(mutation.entityId),
+        _registry.get(mutation.entityType).delete(mutation.entityLocalId!),
       MutationType.delete =>
         _registry
             .get(mutation.entityType)
             .resetTombstone(
-              mutation.entityId,
+              mutation.entityLocalId!,
               MutationStatus.failedFatal.label,
             ),
       // TODO add sync status
       MutationType.update =>
-        mutation.previousPayload != null &&
-                mutation.previousPayload?.data != null
-            ? _registry
-                  .get(mutation.entityType)
-                  .update(mutation.entityId, mutation.previousPayload!.data!)
-            : throw CachingException.previousPayloadMissingOrCorrupted(),
+        _registry
+            .get(mutation.entityType)
+            .update(mutation.entityLocalId!, mutation.previousPayload!),
     };
   }
 }

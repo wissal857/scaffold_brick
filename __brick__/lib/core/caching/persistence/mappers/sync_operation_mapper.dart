@@ -6,15 +6,13 @@ import 'package:{{project_name}}/core/database/app_db.dart';
 /// Converts an SyncRequest instance to a drift companion instance
 /// suited for insert operations.
 extension MutationCreateCompanionMapper on SyncCreateRequest {
-  MutationsCompanion toCompanion() {
-    final version = 1;
+  MutationsCompanion toCompanion(int entityLocalId) {
     return MutationsCompanion.insert(
       operationType: mutationType,
-      entityType: entityType,
-      entityId: entityId,
+      entityType: entityType.label,
+      entityLocalId: entityLocalId,
       idempotencyKey: Value(idempotencyKey),
-      payload: SyncMutationRequestPayload(data: payload),
-      etag: version.toString(),
+      payload: Value(SyncMutationRequestPayload(data: payload)),
       status: MutationStatus.pending.label,
       createdAt: timestamp,
     );
@@ -25,10 +23,11 @@ extension MutationUpdateCompanionMapper on SyncUpdateRequest {
   MutationsCompanion toCompanion() {
     return MutationsCompanion.insert(
       operationType: mutationType,
-      entityType: entityType,
-      etag: etag,
-      entityId: entityId,
-      payload: SyncMutationRequestPayload(data: payload),
+      entityType: entityType.label,
+      etag: Value(etag),
+      entityLocalId: entityLocalId,
+      entityRemoteId: Value(entityRemoteId),
+      payload: Value(SyncMutationRequestPayload(data: payload)),
       previousPayload: Value(SyncMutationRequestPayload(data: previousPayload)),
       status: MutationStatus.pending.label,
       createdAt: timestamp,
@@ -41,10 +40,11 @@ extension MutationDeleteCompanionMapper on SyncDeleteRequest {
   MutationsCompanion toCompanion() {
     return MutationsCompanion.insert(
       operationType: mutationType,
-      entityType: entityType,
-      etag: etag,
-      entityId: entityId,
-      payload: SyncMutationRequestPayload(data: payload),
+      entityType: entityType.label,
+      etag: Value(etag),
+      entityLocalId: entityLocalId,
+      entityRemoteId: Value(entityRemoteId),
+      payload: Value(SyncMutationRequestPayload(data: payload)),
       status: MutationStatus.pending.label,
       createdAt: timestamp,
     );
