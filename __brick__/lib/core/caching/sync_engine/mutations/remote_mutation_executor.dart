@@ -4,7 +4,7 @@ import 'package:{{project_name}}/core/caching/models/sync_mutation_request.dart'
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
 import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/retry_policy.dart';
-import 'package:{{project_name}}/core/database/app_db.dart';
+import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_remote_mutation_executor.dart';
 import 'package:{{project_name}}/core/errors/app_exception.dart';
 import 'package:{{project_name}}/core/logging/app_logger.dart';
 import 'package:{{project_name}}/core/network/i_http_client.dart';

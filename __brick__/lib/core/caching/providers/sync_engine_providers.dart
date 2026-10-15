@@ -19,6 +19,7 @@ import 'package:{{project_name}}/core/caching/sync_engine/refresh/i_refresh_sync
 import 'package:{{project_name}}/core/caching/sync_engine/refresh/refresh_synchronizer.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/sync_coordinator.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/sync_engine.dart';
+import 'package:{{project_name}}/core/network/network_providers.dart';
 
 final queueProvider = Provider.autoDispose<IMutationQueue>((ref) {
   return MutationQueue();

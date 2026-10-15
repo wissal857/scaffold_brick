@@ -7,7 +7,7 @@ import 'package:{{project_name}}/core/sorting/sort_direction.dart';
 
 mixin DriftDaoMixin {
   Future<PaginatedCacheModel<TData>>
-  executePaginatedQuery<R, TTable extends Table, TData>({
+  executePaginatedQuery<TTable extends Table, TData>({
     required AppDatabase db,
     required TableInfo<TTable, TData> table,
     required int Function(TData row) idSelector,

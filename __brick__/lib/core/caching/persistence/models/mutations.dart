@@ -4,6 +4,7 @@ import 'package:{{project_name}}/core/caching/persistence/converters/mutation_ty
 import 'package:{{project_name}}/core/caching/persistence/converters/sync_request_payload_converter.dart';
 import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/persistence/converters/entity_type_converter.dart';
+import 'package:{{project_name}}/core/database/app_db.dart';
 
 /// Represent the mutations that need to be synced with the server
 @DataClassName('MutationData')
