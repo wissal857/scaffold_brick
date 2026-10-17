@@ -5,7 +5,6 @@ import 'package:{{project_name}}/core/caching/persistence/state_stores/i_entity_
 import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/persistence/transactions/persistence_transaction.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/mutation_status.dart';
-import 'package:{{project_name}}/core/database/app_db.dart';
 import 'package:{{project_name}}/core/errors/app_exception.dart';
 
 class SyncStateStore implements ISyncStateStore {

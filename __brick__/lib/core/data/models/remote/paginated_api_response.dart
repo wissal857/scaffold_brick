@@ -6,7 +6,12 @@ part 'paginated_api_response.g.dart';
 @Freezed(genericArgumentFactories: true)
 abstract class PaginatedApiResponse<T> with _$PaginatedApiResponse<T> {
   const factory PaginatedApiResponse({
-    required List<T> data,
+    required String requestId,
+    required bool success,
+    required DateTime timestamp,
+    String? etag,
+    List<T>? data,
+    String? error,
     required int total,
     @JsonKey(name: 'nextCursor') int? nextCursor,
   }) = _PaginatedApiResponse<T>;

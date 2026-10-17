@@ -55,7 +55,7 @@ sealed class SyncMutationRequest {
   factory SyncMutationRequest.delete({
     required EntityType entityType,
     required int entityLocalId,
-    required String entityRemoteId,
+    required int entityRemoteId,
     required String etag,
     required Map<String, dynamic> payload,
     required DateTime timestamp,
@@ -64,7 +64,7 @@ sealed class SyncMutationRequest {
   factory SyncMutationRequest.update({
     required EntityType entityType,
     required int entityLocalId,
-    required String entityRemoteId,
+    required int entityRemoteId,
     required String etag,
     required Map<String, dynamic> payload,
     required Map<String, dynamic> previousPayload,
@@ -110,7 +110,7 @@ final class SyncDeleteRequest extends SyncMutationRequest {
 
   final String etag;
   final int entityLocalId;
-  final String entityRemoteId;
+  final int entityRemoteId;
 }
 
 final class SyncUpdateRequest extends SyncMutationRequest {
@@ -130,7 +130,7 @@ final class SyncUpdateRequest extends SyncMutationRequest {
   final Map<String, dynamic> previousPayload;
   final String etag;
   final int entityLocalId;
-  final String entityRemoteId;
+  final int entityRemoteId;
 
   @override
   String toString() {

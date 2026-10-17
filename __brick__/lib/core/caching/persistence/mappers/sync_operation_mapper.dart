@@ -9,7 +9,7 @@ extension MutationCreateCompanionMapper on SyncCreateRequest {
   MutationsCompanion toCompanion(int entityLocalId) {
     return MutationsCompanion.insert(
       operationType: mutationType,
-      entityType: entityType.label,
+      entityType: entityType,
       entityLocalId: entityLocalId,
       idempotencyKey: Value(idempotencyKey),
       payload: Value(SyncMutationRequestPayload(data: payload)),
@@ -23,7 +23,7 @@ extension MutationUpdateCompanionMapper on SyncUpdateRequest {
   MutationsCompanion toCompanion() {
     return MutationsCompanion.insert(
       operationType: mutationType,
-      entityType: entityType.label,
+      entityType: entityType,
       etag: Value(etag),
       entityLocalId: entityLocalId,
       entityRemoteId: Value(entityRemoteId),

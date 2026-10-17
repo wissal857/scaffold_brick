@@ -16,13 +16,13 @@ class ValidMutationData with _$ValidMutationData {
   @override
   final EntityType entityType;
   @override
-  final int? entityLocalId;
+  final int entityLocalId;
   @override
   final String? idempotencyKey;
   @override
   final Set<String>? dirtyFields;
   @override
-  final String? entityRemoteId;
+  final int? entityRemoteId;
   @override
   final String? etag;
   @override
@@ -38,7 +38,7 @@ class ValidMutationData with _$ValidMutationData {
     required this.entityType,
     required this.payload,
     required this.status,
-    this.entityLocalId,
+    required this.entityLocalId,
     this.entityRemoteId,
     this.idempotencyKey,
     this.dirtyFields,

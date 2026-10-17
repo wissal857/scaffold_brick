@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:{{project_name}}/app/providers/entity_local_datasource_registers_initialization.dart';
+import 'package:{{project_name}}/app/providers/datasource_registers_initialization.dart';
 import 'package:{{project_name}}/core/caching/persistence/dao/i_mutation_dao.dart';
 import 'package:{{project_name}}/core/caching/persistence/dao/mutation_dao.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_local_state_store.dart';

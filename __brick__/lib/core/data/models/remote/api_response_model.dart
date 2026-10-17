@@ -9,6 +9,7 @@ abstract class ApiResponseModel<T> with _$ApiResponseModel<T> {
     required String requestId,
     required bool success,
     required String message,
+    String? etag,
     T? data,
     String? timestamp,
     int? statusCode,

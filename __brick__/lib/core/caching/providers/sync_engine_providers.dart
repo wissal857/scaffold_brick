@@ -1,9 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:{{project_name}}/app/providers/entity_local_datasource_registers_initialization.dart';
+import 'package:{{project_name}}/app/providers/datasource_registers_initialization.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/sync_state_store.dart';
 import 'package:{{project_name}}/core/caching/providers/persistence_providers.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/i_sync_coordinator.dart';
+import 'package:{{project_name}}/core/caching/providers/remote_datasource_providers.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/i_sync_engine.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/conflict_resolver.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_conflict_resolver.dart';
@@ -19,7 +20,6 @@ import 'package:{{project_name}}/core/caching/sync_engine/refresh/i_refresh_sync
 import 'package:{{project_name}}/core/caching/sync_engine/refresh/refresh_synchronizer.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/sync_coordinator.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/sync_engine.dart';
-import 'package:{{project_name}}/core/network/network_providers.dart';
 
 final queueProvider = Provider.autoDispose<IMutationQueue>((ref) {
   return MutationQueue();
@@ -41,8 +41,9 @@ final syncStateStoreProvider = Provider.autoDispose<ISyncStateStore>((ref) {
 final mutationExecutorProvider = Provider.autoDispose<IRemoteMutationExecutor>((
   ref,
 ) {
+  ref.read(entityRemoteDatasourceRegistersInitializationProvider);
   return RemoteMutationExecutor(
-    httpClient: ref.read(httpClientProvider),
+    remoteDatasourceRegistry: ref.read(entityRemoteDatasourceRegistryProvider),
     retryPolicy: ref.read(retryPolicyProvider),
     syncStateStore: ref.read(syncStateStoreProvider),
   );

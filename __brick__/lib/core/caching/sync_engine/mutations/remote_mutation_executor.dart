@@ -2,23 +2,24 @@ import 'package:dio/dio.dart';
 import 'package:{{project_name}}/core/caching/models/remote_mutation_response.dart';
 import 'package:{{project_name}}/core/caching/models/sync_mutation_request.dart';
 import 'package:{{project_name}}/core/caching/persistence/state_stores/i_sync_state_store.dart';
+import 'package:{{project_name}}/core/caching/network/i_entity_remote_datasource_registry.dart';
 import 'package:{{project_name}}/core/caching/models/valid_mutation_data.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/retry_policy.dart';
 import 'package:{{project_name}}/core/caching/sync_engine/mutations/i_remote_mutation_executor.dart';
+import 'package:{{project_name}}/core/data/models/remote/api_response_model.dart';
 import 'package:{{project_name}}/core/errors/app_exception.dart';
 import 'package:{{project_name}}/core/logging/app_logger.dart';
-import 'package:{{project_name}}/core/network/i_http_client.dart';
 
 class RemoteMutationExecutor implements IRemoteMutationExecutor {
   RemoteMutationExecutor({
-    required IHttpClient httpClient,
+    required IEntityRemoteDatasourceRegistry remoteDatasourceRegistry,
     required RetryPolicy retryPolicy,
     required ISyncStateStore syncStateStore,
-  }) : _httpClient = httpClient,
+  }) : _remoteDatasourceRegistry = remoteDatasourceRegistry,
        _retryPolicy = retryPolicy,
        _syncStateStore = syncStateStore;
 
-  final IHttpClient _httpClient;
+  final IEntityRemoteDatasourceRegistry _remoteDatasourceRegistry;
   final RetryPolicy _retryPolicy;
   final ISyncStateStore _syncStateStore;
   final _log = AppLogger.logger;
@@ -46,40 +47,49 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
   ) {
     return switch (pendingMutation.operationType) {
       MutationType.create => _safeRequest(
-        _httpClient.post(
-          "/${pendingMutation.entityType}",
-          data: pendingMutation.payload,
-          headers: {'Idempotency-Key': pendingMutation.etag},
-        ),
+        _remoteDatasourceRegistry
+            .get(pendingMutation.entityType)
+            .add(pendingMutation.payload),
+        // _httpClient.post(
+        //   "/${pendingMutation.entityType}",
+        //   data: pendingMutation.payload!,
+        //   headers: {'Idempotency-Key': pendingMutation.etag},
+        // ),
         pendingMutation,
       ),
       MutationType.update => _safeRequest(
-        _httpClient.put(
-          "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
-          data: pendingMutation.payload,
-          headers: {'If-Match': pendingMutation.etag},
-        ),
+        _remoteDatasourceRegistry
+            .get(pendingMutation.entityType)
+            .update(pendingMutation.entityRemoteId!, pendingMutation.payload),
+        // _httpClient.put(
+        //   "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
+        //   data: pendingMutation.payload!,
+        //   headers: {'If-Match': pendingMutation.etag},
+        // ),
         pendingMutation,
       ),
       MutationType.delete => _safeRequest(
-        _httpClient.delete(
-          "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
-          headers: {'If-Match': pendingMutation.etag},
-        ),
+        _remoteDatasourceRegistry
+            .get(pendingMutation.entityType)
+            .delete(pendingMutation.entityRemoteId!),
+        // _httpClient.delete(
+        //   "/${pendingMutation.entityType}/${pendingMutation.entityRemoteId}",
+        //   headers: {'If-Match': pendingMutation.etag},
+        // ),
         pendingMutation,
       ),
     };
   }
 
   Future<RemoteMutationResponse> _safeRequest(
-    Future<Response> request,
+    Future<ApiResponseModel> request,
     ValidMutationData mutation,
   ) async {
     try {
       await _syncStateStore.markInProgress(mutation);
       final response = await request;
       if (mutation.operationType == MutationType.create) {
-        if (response.headers.value('ETag') == null) {
+        if (response.etag == null) {
           _log.severe(
             NetworkException.etagMissing().message,
             NetworkException.etagMissing(),
@@ -91,7 +101,7 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
         }
         return RemoteMutationResponse.createSuccess(
           mutation: mutation,
-          etag: response.headers.value('ETag')!,
+          etag: response.etag!,
           responseData: response.data,
         );
       }
@@ -115,6 +125,7 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
     ValidMutationData mutation,
     DioException e,
   ) async {
+    // TODO handle 409 and rate limit status code
     if (e.type == DioExceptionType.badResponse) {
       if (e.response?.statusCode == 404) {
         return RemoteMutationResponse.error(
@@ -131,7 +142,7 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
         final response = await _retryFetch(mutation, 0);
         if (response == null ||
             response.data == null ||
-            response.headers.value('ETag') == null) {
+            response.etag == null) {
           return RemoteMutationResponse.error(
             errorType: RemoteMutationErrorType.unresolvedConflict,
             mutation: mutation,
@@ -139,7 +150,7 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
         }
         return RemoteMutationResponse.conflict(
           mutation: mutation,
-          etag: response.headers.value('ETag')!,
+          etag: response.etag!,
           serverRepresentation: response.data,
         );
       }
@@ -184,11 +195,14 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
     return response;
   }
 
-  Future<Response?> _retryFetch(ValidMutationData mutation, int attempt) async {
+  Future<ApiResponseModel?> _retryFetch(
+    ValidMutationData mutation,
+    int attempt,
+  ) async {
     try {
-      return await _httpClient.get(
-        '/${mutation.entityType}/${mutation.entityRemoteId}',
-      );
+      return await _remoteDatasourceRegistry
+          .get(mutation.entityType)
+          .fetchById(mutation.entityRemoteId!);
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
@@ -212,7 +226,7 @@ class RemoteMutationExecutor implements IRemoteMutationExecutor {
     }
   }
 
-  void _logFetchError(String entityType, String entityRemoteId, Object e) {
+  void _logFetchError(String entityType, int entityRemoteId, Object e) {
     _log.severe(
       'RemoteMutationExecutor failed to fetch a resource after a conflict: path /$entityType/$entityRemoteId',
       e,

@@ -18,7 +18,7 @@ class Mutations extends Table {
       text().map(const MutationTypeConverter())(); // CREATE,UPDATE,DELETE
   TextColumn get entityType => text().map(const EntityTypeConverter())();
   IntColumn get entityLocalId => integer()();
-  TextColumn get entityRemoteId => text().nullable()();
+  IntColumn get entityRemoteId => integer().nullable()();
   TextColumn get idempotencyKey => text().nullable()();
   TextColumn get etag => text().nullable()();
   TextColumn get payload =>
